@@ -57,6 +57,11 @@
 
   /** التحقق من رقم الهاتف السوداني */
   function isValidPhone(v) {
+  const cleaned = v.replace(/\D/g, '');
+  return /^(0(11|12|90|91|92|93|94|96|99)\d{7})$/.test(cleaned) ||
+         /^(249(11|12|90|91|92|93|94|96|99)\d{7})$/.test(cleaned);
+  }
+  function isValidPhone0(v) {
     // يقبل أرقام سودانية ببادئات معتمدة:
     // Zain: 012, 090, 091, 096
     // MTN: 092, 099
@@ -368,8 +373,221 @@
   // ══════════════════════════════════════════════════
   //  معالجة "إرسال" مع التحقق
   // ══════════════════════════════════════════════════
+function onSend() {
+  const v = $field.value.trim();
 
-  function onSend() {
+  const billSvc = {
+    '1': 'كهرباء',
+    '2': 'مياه',
+    '3': 'إنترنت',
+    '4': 'اشتراك تلفزيون'
+  };
+
+  const operators = {
+    '1': 'زين',
+    '2': 'سوداني',
+    '3': 'ام تي ان MTN'
+  };
+
+  // ── helper functions ─────────────────────
+
+  const requireValue = (msg) => {
+    if (!v) {
+      showError(msg);
+      return false;
+    }
+    return true;
+  };
+
+  const vibrate = () => {
+    if (navigator.vibrate) navigator.vibrate(40);
+  };
+
+  const menuActions = {
+    '1': goSendPhone,
+    '2': goPayMenu,
+    '3': goBalance,
+    '4': goHistory,
+    '5': goHelp
+  };
+
+  // ── state machine ────────────────────────
+
+  switch (screen) {
+
+    // ── Dial ───────────────────────────────
+    case 'dial':
+      if (v === '*123#' || v === '') {
+        goMenu();
+      } else {
+        showError('اكتب *123# للوصول للخدمة');
+      }
+      break;
+
+    // ── Main Menu ──────────────────────────
+    case 'menu':
+      if (menuActions[v]) {
+        menuActions[v]();
+      } else {
+        showError('أدخل رقم من 1 إلى 5');
+      }
+      break;
+
+    // ── Send Money ─────────────────────────
+    case 'sPhone':
+      if (!requireValue('الرجاء إدخال رقم الهاتف')) break;
+      if (!isValidPhone(v)) {
+        showError('رقم هاتف غير صحيح\nالصيغة: 09XXXXXXXX');
+        break;
+      }
+      sendData.phone = v;
+      goSendAmount();
+      break;
+
+    case 'sAmount':
+      if (v === '0') { goMenu(); break; }
+      if (!requireValue('الرجاء إدخال المبلغ')) break;
+      if (!isValidAmount(v)) {
+        showError('مبلغ غير صحيح\n(1 – 500,000 ج.س)');
+        break;
+      }
+      sendData.amount = v;
+      goSendPin();
+      break;
+
+    case 'sPin':
+      if (v === '0') { goMenu(); break; }
+      if (!requireValue('الرجاء إدخال الرقم السري')) break;
+      if (!isValidPin(v)) {
+        showError('الرقم السري يجب أن يكون\n4 إلى 6 أرقام');
+        break;
+      }
+      sendData.pin = v;
+      goSendProcessing();
+      delete sendData.pin;
+      break;
+
+    case 'sDone':
+      goMenu();
+      break;
+
+    // ── Bills ──────────────────────────────
+    case 'payMenu':
+      if (v === '0') { goMenu(); break; }
+      if (v === '5') { goAirtimeMenu(); break; }
+
+      if (billSvc[v]) {
+        sendData = { service: billSvc[v] };
+        goPayAccount();
+      } else {
+        showError('أدخل رقم من 1 إلى 5 أو 0 للرجوع');
+      }
+      break;
+
+    case 'payAcc':
+      if (v === '0') { goPayMenu(); break; }
+      if (!requireValue('الرجاء إدخال رقم الحساب')) break;
+
+      if (!isValidAccount(v)) {
+        showError('رقم حساب غير صحيح\n(4 أرقام على الأقل)');
+        break;
+      }
+
+      sendData.account = v;
+      goPayAmount();
+      break;
+
+    case 'payAmt':
+      if (v === '0') { goPayMenu(); break; }
+      if (!requireValue('الرجاء إدخال المبلغ')) break;
+
+      if (!isValidAmount(v)) {
+        showError('مبلغ غير صحيح\n(1 – 500,000 ج.س)');
+        break;
+      }
+
+      sendData.amount = v;
+      goPayProcessing();
+      break;
+
+    case 'payDone':
+      goMenu();
+      break;
+
+    // ── Airtime ────────────────────────────
+    case 'airMenu':
+      if (v === '0') { goPayMenu(); break; }
+
+      if (operators[v]) {
+        sendData = { operator: operators[v] };
+        goAirtimePhone();
+      } else {
+        showError('أدخل رقم من 1 إلى 3 أو 0 للرجوع');
+      }
+      break;
+
+    case 'airPhone':
+      if (v === '0') { goAirtimeMenu(); break; }
+      if (!requireValue('الرجاء إدخال رقم الهاتف')) break;
+
+      if (!isValidPhone(v)) {
+        showError('رقم هاتف غير صحيح\nالصيغة: 09XXXXXXXX');
+        break;
+      }
+
+      if (!isOperatorMatch(v, sendData.operator)) {
+        showError('الرقم لا يتبع لشبكة ' + sendData.operator);
+        break;
+      }
+
+      sendData.phone = v;
+      goAirtimeAmount();
+      break;
+
+    case 'airAmount':
+      if (v === '0') { goAirtimeMenu(); break; }
+      if (!requireValue('الرجاء إدخال المبلغ')) break;
+
+      if (!isValidAmount(v)) {
+        showError('مبلغ غير صحيح\n(1 – 500,000 ج.س)');
+        break;
+      }
+
+      sendData.amount = v;
+      goAirtimePin();
+      break;
+
+    case 'airPin':
+      if (v === '0') { goAirtimeMenu(); break; }
+      if (!requireValue('الرجاء إدخال الرقم السري')) break;
+
+      if (!isValidPin(v)) {
+        showError('الرقم السري يجب أن يكون\n4 إلى 6 أرقام');
+        break;
+      }
+
+      sendData.pin = v;
+      goAirtimeProcessing();
+      delete sendData.pin;
+      break;
+
+    case 'airDone':
+      goMenu();
+      break;
+
+    // ── Static screens ─────────────────────
+    case 'bal':
+    case 'hist':
+    case 'help':
+      goMenu();
+      break;
+  }
+
+  vibrate();
+}
+
+
+  function onSend0() {
     const v = $field.value.trim();
 
     const billSvc = { '1': 'كهرباء', '2': 'مياه', '3': 'إنترنت', '4': 'اشتراك تلفزيون' };
@@ -465,6 +683,11 @@
         goMenu();
         break;
     }
+
+    if (navigator.vibrate) {
+      navigator.vibrate(40);
+    }
+
   }
 
   function onCancel() {
