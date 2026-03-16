@@ -1,0 +1,421 @@
+<!--
+  © 2026 webhubx. All rights reserved.
+  Sudan Pay - USSD Financial Service Simulator
+  Licensed under the MIT License. See LICENSE file for details.
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="webhubx" />
+  <title>سودان باي – معاملات مالية بدون إنترنت عبر USSD</title>
+  <meta name="description" content="تجربة تفاعلية توضح كيف يمكن لتقنية USSD تمكين الخدمات المالية بدون إنترنت في السودان." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { arabic: ['"Tajawal"', '"Noto Kufi Arabic"', 'system-ui', 'sans-serif'] },
+          keyframes: {
+            fadeIn: { '0%': { opacity:'0', transform:'translateY(14px)' }, '100%': { opacity:'1', transform:'translateY(0)' } },
+            shimmer: { '0%': { backgroundPosition:'-200% 0' }, '100%': { backgroundPosition:'200% 0' } },
+            float: { '0%,100%': { transform:'translateY(0)' }, '50%': { transform:'translateY(-10px)' } },
+          },
+          animation: {
+            fadeIn: 'fadeIn 0.6s ease-out forwards',
+            shimmer: 'shimmer 2.5s linear infinite',
+            float: 'float 3s ease-in-out infinite',
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Tajawal', 'Noto Kufi Arabic', system-ui, sans-serif; background: #060612; color: #fff; }
+
+    /* Navbar */
+    .navbar {
+      position: fixed; top: 0; right: 0; left: 0; z-index: 999;
+      padding: 16px 0;
+      transition: background 0.3s, box-shadow 0.3s, padding 0.3s;
+    }
+    .navbar.scrolled {
+      background: rgba(6,6,18,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+      padding: 10px 0;
+    }
+    .nav-logo {
+      font-weight: 900; font-size: 22px; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #22c55e, #86efac);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      text-decoration: none;
+    }
+    .nav-links a {
+      color: rgba(255,255,255,0.55); font-size: 14px; font-weight: 500;
+      text-decoration: none; transition: color 0.2s; padding: 6px 0;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 20px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      background: #22c55e; color: #000; text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 0 20px rgba(34,197,94,0.3); }
+
+    /* Mobile menu */
+    .mobile-toggle { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+    @media (max-width: 768px) {
+      .mobile-toggle { display: flex; }
+      .nav-links { display: none; }
+      .nav-links.open {
+        display: flex; flex-direction: column; gap: 8px;
+        position: absolute; top: 100%; right: 0; left: 0;
+        background: rgba(6,6,18,0.95); backdrop-filter: blur(16px);
+        padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      .nav-links.open a { font-size: 16px; padding: 10px 0; }
+    }
+
+    /* Reveal */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* Cards */
+    .card-glow {
+      background: rgba(16,16,36,0.7); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.05); border-radius: 16px;
+      padding: 28px; transition: border-color 0.3s, transform 0.3s;
+    }
+    .card-glow:hover { border-color: rgba(34,197,94,0.25); transform: translateY(-3px); }
+
+    /* Shimmer */
+    .shimmer-text {
+      background: linear-gradient(90deg, #22c55e 0%, #86efac 40%, #22c55e 80%);
+      background-size: 200% auto;
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      animation: shimmer 2.5s linear infinite;
+    }
+
+    /* Stats */
+    .stat-card {
+      background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.1);
+      border-radius: 16px; padding: 24px; text-align: center;
+    }
+    .stat-num { font-size: 32px; font-weight: 900; color: #22c55e; }
+    .stat-label { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+    /* Glow orbs */
+    .glow-orb {
+      position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; opacity: 0.07;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- ═══ Navbar ═══ -->
+  <nav class="navbar" id="navbar">
+    <div class="max-w-6xl mx-auto px-5 flex items-center justify-between">
+      <a href="#" class="nav-logo">سودان باي</a>
+
+      <div class="flex items-center gap-8 nav-links" id="navLinks">
+        <a href="#features">المميزات</a>
+        <a href="#how">كيف يعمل</a>
+        <a href="#impact">التأثير</a>
+        <a href="simulator.html" class="nav-cta">جرّب المحاكي ←</a>
+      </div>
+
+      <button class="mobile-toggle" id="mobileToggle" aria-label="القائمة">
+        <svg class="w-6 h-6" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══ Hero ═══ -->
+  <section class="min-h-screen flex flex-col items-center justify-center px-4 text-center relative overflow-hidden pt-20">
+    <div class="glow-orb w-[500px] h-[500px] bg-green-500 top-[10%] right-[-10%] absolute"></div>
+    <div class="glow-orb w-[400px] h-[400px] bg-emerald-400 bottom-[15%] left-[-5%] absolute"></div>
+
+    <div class="mb-6 animate-fadeIn">
+      <span class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-green-500/20 bg-green-500/5 text-green-400 text-sm tracking-wider">
+        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"></span>
+        خدمة USSD *123#
+      </span>
+    </div>
+
+    <h1 class="text-4xl sm:text-5xl md:text-7xl font-black leading-[1.15] mb-6 animate-fadeIn max-w-4xl">
+      معاملات مالية
+      <br />
+      بدون إنترنت
+      <br />
+      <span class="shimmer-text">للسودان</span>
+    </h1>
+
+    <p class="text-base sm:text-lg md:text-xl text-gray-400 max-w-xl mb-10 animate-fadeIn leading-relaxed" style="animation-delay:.15s">
+      اكتشف كيف يمكن لتقنية USSD تمكين الخدمات المالية بدون الحاجة للإنترنت — من أي هاتف.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center gap-4 animate-fadeIn" style="animation-delay:.3s">
+      <a href="simulator.html"
+        class="group inline-flex items-center gap-3 px-8 py-4 bg-green-500 text-black font-bold text-lg rounded-2xl
+               hover:shadow-[0_0_40px_rgba(34,197,94,0.35)] transition-all duration-300 hover:scale-105 active:scale-95 no-underline"
+        style="text-decoration:none;">
+        <span>جرّب العرض التجريبي</span>
+        <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1 rotate-180" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </a>
+      <a href="#how" class="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2" style="text-decoration:none;">
+        تعرّف على التقنية
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>
+      </a>
+    </div>
+
+    <!-- إحصائيات Hero -->
+    <div class="grid grid-cols-3 gap-4 sm:gap-8 max-w-lg w-full mt-16 animate-fadeIn" style="animation-delay:.5s">
+      <div class="stat-card">
+        <div class="stat-num">3</div>
+        <div class="stat-label">شبكات مدعومة</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">5+</div>
+        <div class="stat-label">خدمات مالية</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">0</div>
+        <div class="stat-label">حاجة للإنترنت</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ المميزات ═══ -->
+  <section id="features" class="py-24 px-4 relative">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16 reveal">
+        <span class="inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest bg-green-500/10 text-green-400 border border-green-500/20 mb-4">المميزات</span>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">خدمات مالية شاملة</h2>
+        <p class="text-gray-400 max-w-2xl mx-auto">كل ما تحتاجه في خدمة USSD واحدة — بدون تحميل تطبيقات أو اتصال بالإنترنت.</p>
+      </div>
+
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="reveal card-glow">
+          <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 text-xl">💸</div>
+          <h3 class="font-bold text-lg mb-2">إرسال أموال</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">حوّل الأموال لأي رقم سوداني بأمان وسرعة عبر الرقم السري.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.08s">
+          <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 text-xl">📄</div>
+          <h3 class="font-bold text-lg mb-2">دفع فواتير</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">ادفع فواتير الكهرباء والمياه والإنترنت والتلفزيون مباشرة.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.16s">
+          <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 text-xl">📱</div>
+          <h3 class="font-bold text-lg mb-2">شراء رصيد</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">اشحن رصيدك أو رصيد أي رقم — زين، سوداني، أو ام تي ان.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.08s">
+          <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 text-xl">💰</div>
+          <h3 class="font-bold text-lg mb-2">استعلام الرصيد</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">اعرف رصيدك المتاح في أي وقت بضغطة واحدة.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.16s">
+          <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 text-xl">📜</div>
+          <h3 class="font-bold text-lg mb-2">سجل المعاملات</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">تتبع جميع معاملاتك السابقة مع التفاصيل الكاملة.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.24s">
+          <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 text-xl">🔒</div>
+          <h3 class="font-bold text-lg mb-2">حماية بالرقم السري</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">كل معاملة محمية برقم سري مع تحقق صارم من الأرقام.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ كيف يعمل ═══ -->
+  <section id="how" class="py-24 px-4 relative">
+    <div class="glow-orb w-[400px] h-[400px] bg-green-500 top-[20%] left-[50%] absolute" style="transform:translateX(-50%)"></div>
+    <div class="max-w-5xl mx-auto relative">
+      <div class="text-center mb-16 reveal">
+        <span class="inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest bg-green-500/10 text-green-400 border border-green-500/20 mb-4">كيف يعمل</span>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">أربع خطوات بسيطة</h2>
+        <p class="text-gray-400 max-w-2xl mx-auto">من طلب الكود إلى إتمام المعاملة — كل شيء يحدث عبر شبكة الهاتف المحمول.</p>
+      </div>
+
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="reveal card-glow text-center relative">
+          <div class="absolute -top-3 -right-3 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-black font-black text-sm">1</div>
+          <div class="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-4 text-2xl">📱</div>
+          <h3 class="font-semibold text-lg mb-2">اطلب الكود</h3>
+          <p class="text-gray-400 text-sm">اطلب <span class="text-green-400 font-bold">*123#</span> من أي هاتف محمول.</p>
+        </div>
+        <div class="reveal card-glow text-center relative" style="transition-delay:.1s">
+          <div class="absolute -top-3 -right-3 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-black font-black text-sm">2</div>
+          <div class="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-4 text-2xl">📡</div>
+          <h3 class="font-semibold text-lg mb-2">الشبكة تتصل</h3>
+          <p class="text-gray-400 text-sm">توجّه الشبكة الطلب إلى منصة الخدمة عبر قنوات الإشارة.</p>
+        </div>
+        <div class="reveal card-glow text-center relative" style="transition-delay:.2s">
+          <div class="absolute -top-3 -right-3 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-black font-black text-sm">3</div>
+          <div class="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-4 text-2xl">📋</div>
+          <h3 class="font-semibold text-lg mb-2">اختر الخدمة</h3>
+          <p class="text-gray-400 text-sm">تظهر قائمة تفاعلية. تنقل بكتابة الأرقام.</p>
+        </div>
+        <div class="reveal card-glow text-center relative" style="transition-delay:.3s">
+          <div class="absolute -top-3 -right-3 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-black font-black text-sm">4</div>
+          <div class="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-4 text-2xl">✅</div>
+          <h3 class="font-semibold text-lg mb-2">تمت المعاملة</h3>
+          <p class="text-gray-400 text-sm">تتم المعالجة فوراً — بدون تطبيق أو إنترنت.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ الشبكات المدعومة ═══ -->
+  <section class="py-16 px-4">
+    <div class="max-w-4xl mx-auto">
+      <div class="reveal text-center mb-12">
+        <span class="inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest bg-green-500/10 text-green-400 border border-green-500/20 mb-4">الشبكات</span>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">شبكات الاتصال المدعومة</h2>
+      </div>
+      <div class="grid grid-cols-3 gap-4 sm:gap-6 max-w-lg mx-auto">
+        <div class="reveal card-glow text-center py-8">
+          <div class="text-3xl mb-3">🟢</div>
+          <h3 class="font-bold text-lg">زين</h3>
+          <p class="text-gray-500 text-xs mt-1">012 / 090 / 091 / 096</p>
+        </div>
+        <div class="reveal card-glow text-center py-8" style="transition-delay:.1s">
+          <div class="text-3xl mb-3">🟡</div>
+          <h3 class="font-bold text-lg">MTN</h3>
+          <p class="text-gray-500 text-xs mt-1">092 / 099</p>
+        </div>
+        <div class="reveal card-glow text-center py-8" style="transition-delay:.2s">
+          <div class="text-3xl mb-3">🔵</div>
+          <h3 class="font-bold text-lg">سوداني</h3>
+          <p class="text-gray-500 text-xs mt-1">011 / 093 / 094</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ لماذا مهم ═══ -->
+  <section id="impact" class="py-24 px-4 relative">
+    <div class="max-w-5xl mx-auto">
+      <div class="reveal text-center mb-16">
+        <span class="inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest bg-green-500/10 text-green-400 border border-green-500/20 mb-4">التأثير</span>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">لماذا هذا مهم للسودان؟</h2>
+        <p class="text-gray-400 max-w-2xl mx-auto leading-relaxed">
+          في بلد تكون فيه خدمة الإنترنت محدودة واستخدام الهاتف المحمول واسع الانتشار، تقنية USSD تسد الفجوة بين الناس والخدمات المالية الأساسية.
+        </p>
+      </div>
+
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="reveal card-glow">
+          <div class="text-3xl mb-3">🌍</div>
+          <h3 class="font-bold text-lg mb-2">لا حاجة للإنترنت</h3>
+          <p class="text-gray-400 text-sm">يعمل على أي شبكة محمول — حتى 2G — بدون باقة بيانات.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.08s">
+          <div class="text-3xl mb-3">📲</div>
+          <h3 class="font-bold text-lg mb-2">يعمل على أي هاتف</h3>
+          <p class="text-gray-400 text-sm">لا حاجة لهاتف ذكي. أي هاتف بسيط يمكنه الوصول.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.16s">
+          <div class="text-3xl mb-3">⚡</div>
+          <h3 class="font-bold text-lg mb-2">معالجة فورية</h3>
+          <p class="text-gray-400 text-sm">تتم المعاملات فوراً عبر إشارة الشبكة المحمولة.</p>
+        </div>
+        <div class="reveal card-glow">
+          <div class="text-3xl mb-3">💰</div>
+          <h3 class="font-bold text-lg mb-2">الشمول المالي</h3>
+          <p class="text-gray-400 text-sm">يوصل الخدمات المصرفية لملايين المواطنين السودانيين.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.08s">
+          <div class="text-3xl mb-3">🏪</div>
+          <h3 class="font-bold text-lg mb-2">يمكّن الأعمال</h3>
+          <p class="text-gray-400 text-sm">يمكن للتجار قبول المدفوعات وتتبع المبيعات.</p>
+        </div>
+        <div class="reveal card-glow" style="transition-delay:.16s">
+          <div class="text-3xl mb-3">🔐</div>
+          <h3 class="font-bold text-lg mb-2">آمن بالتصميم</h3>
+          <p class="text-gray-400 text-sm">جلسات مشفرة ومحمية بالرقم السري مع تحقق دقيق.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CTA ═══ -->
+  <section class="py-20 px-4 relative">
+    <div class="max-w-2xl mx-auto text-center reveal">
+      <div class="card-glow py-16 px-8 relative overflow-hidden">
+        <div class="glow-orb w-[300px] h-[300px] bg-green-500 top-0 left-[50%] absolute" style="transform:translateX(-50%); opacity:0.04;"></div>
+        <h2 class="text-3xl sm:text-4xl font-black mb-4 relative">جرّب المحاكي الآن</h2>
+        <p class="text-gray-400 mb-8 relative">شاهد كيف تعمل الخدمات المالية عبر USSD في تجربة واقعية تحاكي الهاتف الحقيقي.</p>
+        <a href="simulator.html"
+          class="group inline-flex items-center gap-3 px-8 py-4 bg-green-500 text-black font-bold text-lg rounded-2xl
+                 hover:shadow-[0_0_40px_rgba(34,197,94,0.35)] transition-all duration-300 hover:scale-105 active:scale-95 relative no-underline"
+          style="text-decoration:none;">
+          <span>ابدأ التجربة</span>
+          <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1 rotate-180" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Footer ═══ -->
+  <footer class="border-t border-white/5 py-10 px-4">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="nav-logo text-lg" style="-webkit-text-fill-color:transparent;">سودان باي</span>
+        <span class="text-gray-600 text-xs">© <span id="footerYear"></span> webhubx</span>
+      </div>
+      <div class="flex items-center gap-6 text-gray-500 text-xs">
+        <span>عرض تجريبي تعليمي</span>
+        <span>•</span>
+        <span>MIT License</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 30);
+    });
+
+    // Mobile menu toggle
+    const mobileToggle = document.getElementById('mobileToggle');
+    const navLinks = document.getElementById('navLinks');
+    mobileToggle.addEventListener('click', () => {
+      navLinks.classList.toggle('open');
+    });
+    // Close mobile menu on link click
+    navLinks.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => navLinks.classList.remove('open'));
+    });
+
+    // Scroll reveal
+    const obs = new IntersectionObserver(
+      es => es.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+      { threshold: 0.1 }
+    );
+    document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+    // Footer year
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

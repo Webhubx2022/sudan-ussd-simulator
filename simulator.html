@@ -1,0 +1,348 @@
+<!--
+  © 2026 webhubx. All rights reserved.
+  Sudan Pay - USSD Simulator
+  Licensed under the MIT License. See LICENSE file for details.
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="author" content="webhubx" />
+  <title>سودان باي – محاكي USSD</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Tajawal', system-ui, sans-serif;
+      background: #060612;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ════════════════════════════════════════════════
+       هيكل الهاتف الواقعي
+       ════════════════════════════════════════════════ */
+    .phone-frame {
+      width: 340px;
+      max-width: 92vw;
+      aspect-ratio: 9 / 19.5;
+      background: linear-gradient(160deg, #2a2a35, #141420, #0e0e1a);
+      border-radius: 42px;
+      padding: 10px;
+      position: relative;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.1),
+        0 50px 100px rgba(0,0,0,0.8),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    /* زر الباور (يمين) */
+    .phone-frame::before {
+      content: '';
+      position: absolute;
+      left: -3px;
+      top: 120px;
+      width: 3px;
+      height: 50px;
+      background: linear-gradient(180deg, #333, #1a1a28);
+      border-radius: 3px 0 0 3px;
+    }
+    /* أزرار الصوت */
+    .phone-frame::after {
+      content: '';
+      position: absolute;
+      left: -3px;
+      top: 190px;
+      width: 3px;
+      height: 70px;
+      background: linear-gradient(180deg, #333, #1a1a28);
+      border-radius: 3px 0 0 3px;
+    }
+
+    /* الشاشة */
+    .phone-inner {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      border-radius: 34px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ═══ شريط الحالة ═══ */
+    .statusbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      direction: ltr;
+      flex-shrink: 0;
+      background: #000;
+    }
+    .statusbar-time { font-weight: 700; font-size: 12px; }
+    .sb-right { display: flex; align-items: center; gap: 5px; }
+    .signal-dots { display: flex; gap: 2px; align-items: flex-end; height: 12px; }
+    .signal-dots span { display: block; width: 3px; border-radius: 1px; background: rgba(255,255,255,0.6); }
+    .signal-dots span:nth-child(1) { height: 4px; }
+    .signal-dots span:nth-child(2) { height: 6px; }
+    .signal-dots span:nth-child(3) { height: 8px; }
+    .signal-dots span:nth-child(4) { height: 11px; }
+
+    /* ═══ خلفية الهاتف (تطبيق الهاتف) ═══ */
+    .dialer-bg { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .dialer-title {
+      text-align: right; padding: 16px 22px 12px;
+      font-size: 20px; font-weight: 700; color: #fff;
+    }
+
+    .call-entry {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 22px; border-bottom: 1px solid rgba(255,255,255,0.04); direction: rtl;
+    }
+    .call-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,0.06); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 14px; color: rgba(255,255,255,0.4); flex-shrink: 0;
+    }
+    .call-info { flex: 1; }
+    .call-name { font-size: 14px; color: rgba(255,255,255,0.8); font-weight: 500; }
+    .call-sub { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+    .call-time { font-size: 11px; color: rgba(255,255,255,0.3); flex-shrink: 0; }
+
+    /* لوحة المفاتيح */
+    .keypad-area {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .keypad-row { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .kpad {
+      padding: 12px 0; text-align: center;
+      color: rgba(255,255,255,0.75); font-size: 20px; user-select: none;
+    }
+    .kpad-sub {
+      display: block; font-size: 7px; color: rgba(255,255,255,0.3);
+      letter-spacing: 2px; margin-top: 1px;
+    }
+
+    .call-btn-row {
+      display: flex; justify-content: center;
+      padding: 8px 0 14px; background: rgba(255,255,255,0.02);
+    }
+    .call-btn {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: #2ecc71; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ═══════════════════════════════════════════════
+       USSD Dialog — Samsung واقعي
+       ═══════════════════════════════════════════════ */
+    .ussd-scrim {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.6); z-index: 100;
+      display: flex; align-items: flex-end;
+      transition: opacity 0.2s;
+    }
+    .ussd-popup {
+      width: 100%;
+      background: #2d2d2d;
+      border-radius: 22px 22px 0 0;
+      padding: 22px 18px 16px;
+      display: flex; flex-direction: column;
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .ussd-text {
+      font-family: 'Tajawal', sans-serif;
+      font-size: 15px; line-height: 2;
+      color: #e8e8e8; text-align: center;
+      white-space: pre-line; margin-bottom: 16px;
+      max-height: 220px; overflow-y: auto; direction: rtl;
+    }
+
+    .ussd-field {
+      width: 100%; height: 44px;
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 22px; padding: 0 18px;
+      font-size: 15px; color: #fff; outline: none;
+      font-family: 'Tajawal', sans-serif;
+      text-align: right; direction: rtl;
+      margin-bottom: 14px; transition: border-color 0.2s;
+    }
+    .ussd-field:focus { border-color: rgba(77,172,255,0.5); }
+    .ussd-field::placeholder { color: rgba(255,255,255,0.18); }
+
+    .ussd-btns {
+      display: flex; justify-content: space-between;
+      padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .ussd-btn {
+      background: none; border: none;
+      font-size: 16px; font-weight: 700;
+      color: #5ba8f5; cursor: pointer;
+      padding: 10px 4px; font-family: 'Tajawal', sans-serif;
+      transition: opacity 0.15s; letter-spacing: 0.5px;
+    }
+    .ussd-btn:active { opacity: 0.5; }
+
+    /* Home pill */
+    .home-pill {
+      position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+      width: 95px; height: 4px; background: rgba(255,255,255,0.2);
+      border-radius: 4px; z-index: 200;
+    }
+
+    /* رابط العودة */
+    .back-link {
+      margin-top: 20px; color: rgba(255,255,255,0.35);
+      font-size: 14px; text-decoration: none; transition: color 0.2s;
+    }
+    .back-link:hover { color: rgba(255,255,255,0.7); }
+
+    .hist-link {
+      margin-top: 12px; color: rgba(91,168,245,0.5);
+      font-size: 13px; text-decoration: underline;
+      text-underline-offset: 4px; transition: color 0.2s;
+      background: none; border: none; cursor: pointer;
+      font-family: 'Tajawal', sans-serif; display: none;
+    }
+    .hist-link:hover { color: rgba(91,168,245,0.9); }
+  </style>
+</head>
+
+<body>
+
+  <!-- الهاتف -->
+  <div class="phone-frame">
+    <div class="phone-inner">
+
+      <!-- شريط الحالة -->
+      <div class="statusbar">
+        <span class="statusbar-time" id="clock"></span>
+        <div class="sb-right">
+          <span style="font-size:10px;">4G</span>
+          <div class="signal-dots"><span></span><span></span><span></span><span></span></div>
+          <span style="font-size:10px;">٪٨٥</span>
+          <svg width="20" height="10" viewBox="0 0 20 10" fill="none">
+            <rect x="0.5" y="0.5" width="15" height="9" rx="2" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+            <rect x="2" y="2" width="11" height="6" rx="1" fill="rgba(255,255,255,0.5)"/>
+            <rect x="16.5" y="3" width="2.5" height="4" rx="1" fill="rgba(255,255,255,0.3)"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- خلفية تطبيق الهاتف -->
+      <div class="dialer-bg">
+        <div class="dialer-title">الهاتف</div>
+
+        <div style="flex:1; overflow:hidden;">
+          <div class="call-entry">
+            <div class="call-icon">ⓘ</div>
+            <div class="call-info">
+              <div class="call-name" style="direction:ltr; text-align:right;">011 551 8760</div>
+              <div class="call-sub">🇸🇩 السودان</div>
+            </div>
+            <div class="call-time">أمس</div>
+          </div>
+          <div class="call-entry">
+            <div class="call-icon">ⓘ</div>
+            <div class="call-info">
+              <div class="call-name" style="direction:ltr; text-align:right;">+249 96 636 1257</div>
+              <div class="call-sub">🇸🇩 السودان</div>
+            </div>
+            <div class="call-time">أمس</div>
+          </div>
+          <div class="call-entry">
+            <div class="call-icon">ⓘ</div>
+            <div class="call-info">
+              <div class="call-name" style="direction:ltr; text-align:right;">090 386 1827</div>
+              <div class="call-sub">🇸🇩 السودان</div>
+            </div>
+            <div class="call-time">أمس</div>
+          </div>
+          <div class="call-entry">
+            <div class="call-icon">ⓘ</div>
+            <div class="call-info">
+              <div class="call-name">جرسومه 🐾</div>
+              <div class="call-sub">🇸🇩 السودان</div>
+            </div>
+            <div class="call-time">أمس</div>
+          </div>
+        </div>
+
+        <!-- لوحة المفاتيح -->
+        <div class="keypad-area">
+          <div class="keypad-row">
+            <div class="kpad">1</div>
+            <div class="kpad">2<span class="kpad-sub">ABC</span></div>
+            <div class="kpad">3<span class="kpad-sub">DEF</span></div>
+          </div>
+          <div class="keypad-row">
+            <div class="kpad">4<span class="kpad-sub">GHI</span></div>
+            <div class="kpad">5<span class="kpad-sub">JKL</span></div>
+            <div class="kpad">6<span class="kpad-sub">MNO</span></div>
+          </div>
+          <div class="keypad-row">
+            <div class="kpad">7<span class="kpad-sub">PQRS</span></div>
+            <div class="kpad">8<span class="kpad-sub">TUV</span></div>
+            <div class="kpad">9<span class="kpad-sub">WXYZ</span></div>
+          </div>
+          <div class="keypad-row">
+            <div class="kpad">*</div>
+            <div class="kpad">0<span class="kpad-sub">+</span></div>
+            <div class="kpad">#</div>
+          </div>
+        </div>
+
+        <div class="call-btn-row">
+          <div class="call-btn">
+            <svg width="24" height="24" fill="#fff" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.58 1 1 0 01-.25 1.02l-2.2 2.19z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- ديالوج USSD -->
+      <div id="ussdScrim" class="ussd-scrim">
+        <div class="ussd-popup">
+          <div id="ussdText" class="ussd-text"></div>
+          <input id="ussdField" class="ussd-field" type="text" />
+          <div class="ussd-btns">
+            <button id="btnSend" class="ussd-btn">إرسال</button>
+            <button id="btnCancel" class="ussd-btn">إلغاء</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-pill"></div>
+    </div>
+  </div>
+
+  <!-- روابط أسفل الهاتف -->
+  <button id="btnHistory" class="hist-link">📜 سجل المعاملات</button>
+  <a href="index.html" class="back-link">→ العودة للصفحة الرئيسية</a>
+
+  <script src="app.js"></script>
+</body>
+</html>
